@@ -59,7 +59,7 @@ A full-stack web application for tracking daily habits. Users can sign up, log i
 
 ## 🌐 Live Demo
 
-**Live App URL:** https://habit-app-nocodedev11.vercel.app
+**Live App URL:** https://habit-app-six-omega.vercel.app
 
 **Test Account:**
 - Email: test@example.com
