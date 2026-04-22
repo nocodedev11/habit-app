@@ -1,65 +1,208 @@
-import Image from "next/image";
+'use client'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { useRouter } from 'next/navigation'
 
-export default function Home() {
+export default function HomePage() {
+  const [habits, setHabits] = useState([])
+  const [newHabit, setNewHabit] = useState('')
+  const [user, setUser] = useState(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+      } else {
+        setUser(user)
+        fetchHabits(user.id)
+      }
+    }
+    getUser()
+  }, [])
+
+  const fetchHabits = async (userId) => {
+    const { data, error } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (!error) setHabits(data)
+  }
+
+  const addHabit = async () => {
+    if (!newHabit.trim()) return
+    const { error } = await supabase
+      .from('habits')
+      .insert([{ user_id: user.id, title: newHabit, completed: false }])
+    if (!error) {
+      setNewHabit('')
+      fetchHabits(user.id)
+    }
+  }
+
+  const toggleHabit = async (habit) => {
+    const { error } = await supabase
+      .from('habits')
+      .update({ completed: !habit.completed })
+      .eq('id', habit.id)
+    if (!error) fetchHabits(user.id)
+  }
+
+  const deleteHabit = async (id) => {
+    const { error } = await supabase
+      .from('habits')
+      .delete()
+      .eq('id', id)
+    if (!error) fetchHabits(user.id)
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      fontFamily: 'system-ui, sans-serif',
+      padding: '40px 20px'
+    }}>
+      <div style={{
+        maxWidth: '600px',
+        margin: '0 auto'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '30px'
+        }}>
+          <div>
+            <h1 style={{ color: 'white', fontSize: '32px', fontWeight: 'bold', margin: 0 }}>
+              ✅ My Habits
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.8)', margin: '4px 0 0' }}>
+              {user?.email}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '2px solid rgba(255,255,255,0.4)',
+              padding: '10px 20px',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Logout
+          </button>
         </div>
-      </main>
+
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '24px'
+        }}>
+          <input
+            style={{
+              flex: 1,
+              padding: '14px 18px',
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '16px',
+              outline: 'none',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+            }}
+            type="text"
+            placeholder="Add a new habit..."
+            value={newHabit}
+            onChange={e => setNewHabit(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addHabit()}
+          />
+          <button
+            onClick={addHabit}
+            style={{
+              background: 'white',
+              color: '#667eea',
+              border: 'none',
+              padding: '14px 24px',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+            }}
+          >
+            Add
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {habits.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.8)',
+              padding: '40px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '16px'
+            }}>
+              No habits yet. Add one above! 🚀
+            </div>
+          )}
+          {habits.map(habit => (
+            <div
+              key={habit.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'white',
+                padding: '16px 20px',
+                borderRadius: '14px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <input
+                  type="checkbox"
+                  checked={habit.completed}
+                  onChange={() => toggleHabit(habit)}
+                  style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                />
+                <span style={{
+                  fontSize: '16px',
+                  color: habit.completed ? '#aaa' : '#1a1a2e',
+                  textDecoration: habit.completed ? 'line-through' : 'none'
+                }}>
+                  {habit.title}
+                </span>
+              </div>
+              <button
+                onClick={() => deleteHabit(habit.id)}
+                style={{
+                  background: '#fee2e2',
+                  color: '#ef4444',
+                  border: 'none',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '16px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-  );
+  )
 }
